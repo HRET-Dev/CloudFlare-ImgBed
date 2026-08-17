@@ -189,3 +189,24 @@ CloudFlare ImgBed 是支持 Docker 与 Serverless 部署的自建图床和文件
 - **上游项目**：[cf-pages/Telegraph-Image](https://github.com/cf-pages/Telegraph-Image)
 
 CloudFlare ImgBed 由 Telegraph-Image 发展而来，感谢原项目作者及所有贡献者。
+
+# 导入 R2 中已有的文件
+
+管理员可以进入 **系统设置 → 上传设置**，在对应的 Cloudflare R2 渠道卡片上点击 **开始同步**，直接从网页完成导入；也可以使用下面的 API。
+
+如果文件是通过 S3 工具、Rclone 或 Cloudflare 控制台直接导入 R2 的，它们不会自动带有 ImgBed 的元数据。管理员登录后可以调用同步接口，将 R2 对象补录到元数据数据库和文件索引中：
+
+```bash
+curl -X POST 'https://你的域名/api/manage/sync/r2' \
+  -H 'Content-Type: application/json' \
+  -b '登录后的 Cookie' \
+  -d '{"channelName":"R2_env","limit":500}'
+```
+
+接口每次最多读取 1000 个对象。如果返回的 `truncated` 是 `true`，把返回的 `cursor` 放进下一次请求中，重复调用直到其为 `false`：
+
+```json
+{"channelName":"R2_env","limit":500,"cursor":"上一次返回的 cursor"}
+```
+
+可使用 `prefix` 只同步指定目录。默认会跳过已经存在于 ImgBed 元数据数据库中的文件；只有明确传入 `"overwrite": true` 才会覆盖已有元数据。
